@@ -1,9 +1,9 @@
 #include <WiFi.h>
 #include <WebServer.h>
 
-// WiFi 配置
-const char* ssid = "123456";
-const char* password = "a1234567";
+// WiFi 配置 - 改为AP模式
+const char* ap_ssid = "ESP32_Alarm";       // 创建的WiFi名称
+const char* ap_password = "12345678";      // WiFi密码（至少8位）
 
 // 硬件引脚定义
 const int LED_PIN = 2;          // 报警 LED (GPIO2)
@@ -13,7 +13,7 @@ const int TOUCH_PIN = T0;       // 触摸引脚 GPIO4 (ESP32 触摸引脚 T0)
 bool armed = false;             // 是否布防
 bool alarmActive = false;       // 是否正在报警闪烁
 unsigned long lastToggle = 0;
-const unsigned long BLINK_INTERVAL = 150;  // 狂闪间隔 150ms
+const unsigned long BLINK_INTERVAL = 150; 
 bool ledState = false;
 
 WebServer server(80);
@@ -26,12 +26,11 @@ void IRAM_ATTR onTouch() {
   }
 }
 
-// 生成 HTML 页面（包含状态显示和布防/撤防按钮）
 String makePage() {
   String statusText;
   String statusColor;
   if (alarmActive) {
-    statusText = " 报警中！";
+    statusText = "报警中！";
     statusColor = "red";
   } else if (armed) {
     statusText = "已布防 (Arm)";
@@ -66,7 +65,7 @@ String makePage() {
   <h1>物联网安防报警器</h1>
   <div class="status" style="color: )rawliteral" + statusColor + R"rawliteral(;">)rawliteral" + statusText + R"rawliteral(</div>
   <a href="/arm"><button class="arm">布防 (Arm)</button></a>
-  <a href="/disarm"><button class="disarm"> 撤防 (Disarm)</button></a>
+  <a href="/disarm"><button class="disarm">撤防 (Disarm)</button></a>
   <div class="info">
     <p>布防后，触摸传感器引脚 (GPIO4) 将触发报警</p>
     <p>报警后 LED 狂闪，必须点击【撤防】才能停止</p>
@@ -105,23 +104,20 @@ void handleDisarm() {
 }
 
 void setup() {
-  Serial.begin(115200);
+  Serial.begin(9600);
   pinMode(LED_PIN, OUTPUT);
   digitalWrite(LED_PIN, LOW);
 
   // 配置触摸引脚中断，触发方式为触摸时产生中断
   touchAttachInterrupt(TOUCH_PIN, onTouch, 40); // 阈值 40，可根据灵敏度调整
 
-  // 连接 WiFi
-  WiFi.begin(ssid, password);
-  Serial.print("正在连接 WiFi");
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
-  }
-  Serial.println("\nWiFi 连接成功");
-  Serial.print("ESP32 访问地址: http://");
-  Serial.println(WiFi.localIP());
+  // 启动AP模式
+  WiFi.softAP(ap_ssid, ap_password);
+  Serial.println("AP模式启动成功");
+  Serial.print("WiFi名称: ");
+  Serial.println(ap_ssid);
+  Serial.print("访问地址: http://");
+  Serial.println(WiFi.softAPIP());
 
   // 配置 Web 路由
   server.on("/", handleRoot);
